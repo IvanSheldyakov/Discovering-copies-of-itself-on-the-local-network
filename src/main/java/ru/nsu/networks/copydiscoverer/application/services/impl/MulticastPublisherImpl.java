@@ -10,13 +10,21 @@ import java.net.DatagramSocket;
 
 public class MulticastPublisherImpl implements MulticastPublisher {
 
-    private DatagramSocket socket;
+    private final DatagramSocket socket;
 
+    public MulticastPublisherImpl() {
+        try {
+            socket = new DatagramSocket();
+        }catch (IOException e) {
+
+            throw new UncheckedIOException(e);
+        }
+
+    }
 
     @Override
     public void send(DatagramPacket packet) {
         try {
-            socket = new DatagramSocket();
             socket.send(packet);
         } catch (IOException e) {
             socket.close();

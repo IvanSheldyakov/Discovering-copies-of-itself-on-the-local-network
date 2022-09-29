@@ -11,6 +11,7 @@ import ru.nsu.networks.copydiscoverer.application.services.impl.DatagramPacketCr
 import ru.nsu.networks.copydiscoverer.application.services.impl.MulticastPublisherImpl;
 
 
+import javax.swing.*;
 import java.net.*;
 
 public class DatagramPacketSender extends Thread {
@@ -19,8 +20,9 @@ public class DatagramPacketSender extends Thread {
     private MulticastPublisher publisher;
     private final InetSocketAddressConfig conf;
 
-    public DatagramPacketSender(InetSocketAddressConfig conf) {
+    public DatagramPacketSender(InetSocketAddressConfig conf, MulticastPublisher publisher) {
         this.conf = conf;
+        this.publisher = publisher;
 
     }
 
@@ -28,8 +30,7 @@ public class DatagramPacketSender extends Thread {
     public void run() {
 
         packetCreator = new DatagramPacketCreatorImpl();
-        publisher = new MulticastPublisherImpl();
-        IpActionMessage message = initMessage();
+        IpActionMessage message = initMessage(Action.UPDATE);
         DatagramPacket packet = packetCreator.create(conf.getGroupIpAddress(),
                 Integer.parseInt(conf.getPort()), message);
 
@@ -37,9 +38,9 @@ public class DatagramPacketSender extends Thread {
 
     }
 
-    private IpActionMessage initMessage() {
+    public static IpActionMessage initMessage(Action action) {
         IpActionMessage message = new IpActionMessage();
-        message.setAction(Action.UPDATE);
+        message.setAction(action);
         return message;
     }
 

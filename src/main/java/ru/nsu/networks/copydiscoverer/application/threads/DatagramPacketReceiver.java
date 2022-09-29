@@ -27,6 +27,7 @@ public class DatagramPacketReceiver extends Thread implements Observable {
 
     private InetSocketAddressConfig config;
 
+    private int port;
 
     public DatagramPacketReceiver(InetSocketAddressConfig config) {
         this.config = config;
@@ -87,7 +88,7 @@ public class DatagramPacketReceiver extends Thread implements Observable {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             IpActionMessage message = objectMapper.readValue(packet.getData(), IpActionMessage.class);
-            message.setIp(packet.getAddress().toString());
+            message.setIp(packet.getAddress().toString()+ " " + packet.getPort());
             return message;
         }catch (IOException e) {
             socket.close();

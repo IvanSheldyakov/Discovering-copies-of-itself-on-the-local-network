@@ -4,6 +4,7 @@ import ru.nsu.networks.copydiscoverer.Utility;
 import ru.nsu.networks.copydiscoverer.application.model.Action;
 import ru.nsu.networks.copydiscoverer.application.model.InetSocketAddressConfig;
 import ru.nsu.networks.copydiscoverer.application.model.IpActionMessage;
+import ru.nsu.networks.copydiscoverer.application.model.TextAreaContext;
 import ru.nsu.networks.copydiscoverer.application.services.DatagramPacketCreator;
 import ru.nsu.networks.copydiscoverer.application.services.InetSocketAddressConfigReader;
 import ru.nsu.networks.copydiscoverer.application.services.MulticastPublisher;
@@ -20,6 +21,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.LinkedHashSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -33,7 +35,12 @@ public class CopyFinderApp extends JFrame implements Observer {
 
     private DatagramPacketSender messageSender;
 
+    private MulticastPublisher publisher;
     private TextArea textArea;
+
+    private TextAreaContext context;
+
+    private LinkedHashSet<String> copies;
 
     private InetSocketAddressConfig config;
 
@@ -68,6 +75,8 @@ public class CopyFinderApp extends JFrame implements Observer {
 
     private void initTextField() {
         textArea = new TextArea();
+        copies = new LinkedHashSet<>();
+        context = new TextAreaContext(textArea,copies);
         this.add(textArea);
     }
 
@@ -78,10 +87,9 @@ public class CopyFinderApp extends JFrame implements Observer {
             public void windowClosing(WindowEvent e)
             {
                 DatagramPacketCreator creator = new DatagramPacketCreatorImpl();
-                MulticastPublisher publisher = new MulticastPublisherImpl();
-                IpActionMessage message = new IpActionMessage();
-                message.setAction(Action.DELETE);
-                publisher.send(creator.create(config.getGroupIpAddress(),Integer.parseInt(config.getPort()),message));
+
+                publisher.send(creator.create(config.getGroupIpAddress(),Integer.parseInt(config.getPort()),
+                        DatagramPacketSender.initMessage(Action.DELETE)));
                 e.getWindow().dispose();
             }
         });
@@ -92,7 +100,8 @@ public class CopyFinderApp extends JFrame implements Observer {
     }
 
     private void initMessageSender() {
-        messageSender = new DatagramPacketSender(config);
+        publisher = new MulticastPublisherImpl();
+        messageSender = new DatagramPacketSender(config,publisher);
         messageSender.setDaemon(true);
     }
 
@@ -106,7 +115,7 @@ public class CopyFinderApp extends JFrame implements Observer {
     private void startExecutors() {
         ScheduledExecutorService executorForSender = Executors.newSingleThreadScheduledExecutor();
         ExecutorService executorForReceiver = Executors.newSingleThreadExecutor();
-        executorForSender.scheduleAtFixedRate(messageSender,1,2, TimeUnit.SECONDS);
+        executorForSender.scheduleAtFixedRate(messageSender,2,2, TimeUnit.SECONDS);
         executorForReceiver.execute(messageReceiver);
     }
 
@@ -128,10 +137,10 @@ public class CopyFinderApp extends JFrame implements Observer {
         String ip = message.getIp();
         switch (message.getAction()) {
             case UPDATE -> {
-                SwingUtilities.invokeLater(new UpdateTextAreaJob(textArea,ip));
+                SwingUtilities.invokeLater(new UpdateTextAreaJob(context,ip));
             }
             case DELETE -> {
-                SwingUtilities.invokeLater(new RemoveFromTextAreaJob(textArea,ip));
+                SwingUtilities.invokeLater(new RemoveFromTextAreaJob(context,ip));
             }
         }
     }
